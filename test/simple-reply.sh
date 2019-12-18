@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 dd if=/dev/urandom of=/tmp/reply bs=1M count=1 2>/dev/null
 cat /tmp/reply | nc -w 5 -l -p 8811 &
