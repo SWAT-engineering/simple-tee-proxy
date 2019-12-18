@@ -20,4 +20,4 @@ jobs:
       run: go build -v cmd/simple-tee-proxy.go
 
     - name: Test
-      run: ./test/simple-reply.sh ./simple-tee-proxy
+      run:  bash test/simple-reply.sh ./simple-tee-proxy
