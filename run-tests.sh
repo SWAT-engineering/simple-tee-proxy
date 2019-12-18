@@ -15,5 +15,6 @@ function runTest() {
 }
 
 runTest "simple reply" "test/simple-reply.sh"
+runTest "simple answer" "test/simple-answer.sh"
 
 exit $RESULT
