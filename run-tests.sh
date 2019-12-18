@@ -5,7 +5,7 @@ PROXY_PROGRAM="$1"
 
 function runTest() {
     printf "🧪 \tRunning: $1 \n"
-    "$2" "$PROXY_PROGRAM"
+    bash "$2" "$PROXY_PROGRAM"
     if [ $? -eq 0 ]; then
         printf "🎉 \tSuccess  \n"
     else
