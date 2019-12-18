@@ -8,11 +8,11 @@ proxy=$!
 sleep 1
 dd if=/dev/urandom of=/tmp/answer bs=1M count=1 2>/dev/null
 cat /tmp/answer | nc localhost 8800
+EXPECTED_SUM=$(cat /tmp/answer | md5sum )
 
 SUM="$(cat /tmp/reply-hash)"
-echo -e "Gotten: \t $SUM"
-EXPECTED_SUM=$(cat /tmp/answer | md5sum )
 echo -e "Expected: \t $EXPECTED_SUM"
+echo -e "Gotten: \t $SUM"
 
 kill $proxy || true
 
