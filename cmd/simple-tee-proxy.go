@@ -2,18 +2,30 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 )
 
+type multipleHosts []string
+
+func (i *multipleHosts) String() string {
+	return fmt.Sprintf("%s", *i)
+}
+
+func (i *multipleHosts) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 func main() {
 	var hostingSide string
 	var forwardSide string
-	var shadowSide string
+	var shadowSide multipleHosts
 
 	flag.StringVar(&hostingSide, "hosting", "0.0.0.0:7700", "What the external address is of the proxy")
 	flag.StringVar(&forwardSide, "forward", "localhost:8800", "Where to forward all tcp connections to")
-	flag.StringVar(&shadowSide, "shadow", "localhost:9900", "Where to send a copy of all connections to, the replies will be ignored, and the proxy will continue working regardless of the shadow side of things")
+	flag.Var(&shadowSide, "shadow", "Where to send a copy of all connections to, the replies will be ignored, and the proxy will continue working regardless of the shadow side of things")
 
 	flag.Parse()
 
@@ -32,11 +44,14 @@ func main() {
 	}
 }
 
-func forward(source net.Conn, forwardSide, shadowSide string) {
+func forward(source net.Conn, forwardSide string, shadowSide []string) {
 	defer source.Close()
 
 	forwardQueue := make(chan []byte, 512)
-	shadowQueue := make(chan []byte, 512)
+	shadowQueues := make([]chan []byte, len(shadowSide))
+	for s := range shadowQueues {
+		shadowQueues[s] = make(chan []byte, 512)
+	}
 
 	go func() {
 		for {
@@ -45,12 +60,16 @@ func forward(source net.Conn, forwardSide, shadowSide string) {
 			read, err := source.Read(buffer)
 			if err != nil {
 				close(forwardQueue)
-				close(shadowQueue)
+				for _, q := range shadowQueues {
+					close(q)
+				}
 				return
 			}
 			if read > 0 {
 				forwardQueue <- buffer[:read]
-				shadowQueue <- buffer[:read]
+				for _, q := range shadowQueues {
+					q <- buffer[:read]
+				}
 			}
 		}
 
@@ -59,7 +78,10 @@ func forward(source net.Conn, forwardSide, shadowSide string) {
 	replyQueue := make(chan []byte, 512)
 
 	go connectBackend(forwardSide, forwardQueue, replyQueue)
-	go connectBackend(shadowSide, shadowQueue, nil)
+
+	for i := range shadowQueues {
+		go connectBackend(shadowSide[i], shadowQueues[i], nil)
+	}
 
 	for r := range replyQueue {
 		source.Write(r)
